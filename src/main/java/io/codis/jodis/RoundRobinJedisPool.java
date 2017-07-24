@@ -1,8 +1,8 @@
 /**
  * @(#)RoundRobinJedisPool.java, 2014-11-30.
- * 
+ *
  * Copyright (c) 2014 CodisLabs.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -10,10 +10,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -61,7 +61,7 @@ import redis.clients.jedis.exceptions.JedisException;
 /**
  * A round robin connection pool for connecting multiple codis proxies based on
  * Jedis and Curator.
- * 
+ *
  * @author Apache9
  * @see https://github.com/xetorthio/jedis
  * @see http://curator.apache.org/
@@ -181,17 +181,17 @@ public class RoundRobinJedisPool implements JedisResourcePool {
                 String addr = proxyInfo.getAddr();
                 PooledObject pool = addr2Pool.remove(addr);
                 if (pool == null) {
-                    LOG.info("Add new proxy: " + addr);
                     String[] hostAndPort = addr.split(":");
                     String host = hostAndPort[0];
                     int port = Integer.parseInt(hostAndPort[1]);
                     pool = new PooledObject(addr,
                             new JedisPool(poolConfig, host, port, connectionTimeoutMs, soTimeoutMs,
                                     password, database, clientName, false, null, null, null));
+                    LOG.info("Add new proxy: " + addr);
                 }
                 builder.add(pool);
-            } catch (Throwable t) {
-                LOG.warn("parse " + childData.getPath() + " failed", t);
+            } catch (Exception e) {
+                LOG.warn("parse " + childData.getPath() + " failed", e);
             }
         }
         this.pools = builder.build();
@@ -235,7 +235,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
 
     /**
      * Create a {@link RoundRobinJedisPool} using the fluent style api.
-     * 
+     *
      * @return
      */
     public static Builder create() {
@@ -270,7 +270,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
 
         /**
          * Set curator client.
-         * 
+         *
          * @param curatorClient
          *            the client to be used
          * @param closeCurator
@@ -284,7 +284,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
 
         /**
          * Set codis proxy path on zk.
-         * 
+         *
          * @param zkProxyDir
          *            the codis proxy dir on ZooKeeper. e.g.,
          *            "/zk/codis/db_xxx/proxy"
@@ -299,7 +299,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
          * <p>
          * We will create curator client based on these parameters and close it
          * while closing pool.
-         * 
+         *
          * @param zkAddr
          *            ZooKeeper connect string. e.g., "zk1:2181"
          * @param zkSessionTimeoutMs
@@ -323,7 +323,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
          * Set jedis pool timeout in milliseconds.
          * <p>
          * We will set connectionTimeoutMs and soTimeoutMs both.
-         * 
+         *
          * @param timeoutMs
          *            timeout is milliseconds
          */
@@ -334,7 +334,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
 
         /**
          * Set jedis pool connection timeout in milliseconds.
-         * 
+         *
          * @param connectionTimeoutMs
          *            timeout is milliseconds
          */
@@ -345,7 +345,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
 
         /**
          * Set jedis pool connection soTimeout in milliseconds.
-         * 
+         *
          * @param soTimeoutMs
          *            timeout is milliseconds
          */
