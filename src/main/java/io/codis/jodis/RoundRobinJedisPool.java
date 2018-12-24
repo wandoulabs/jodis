@@ -96,6 +96,21 @@ public class RoundRobinJedisPool implements JedisResourcePool {
             this.addr = addr;
             this.pool = pool;
         }
+
+        public Jedis getResource() {
+            return pool.getResource();
+        }
+
+        public void close() {
+            pool.close();
+            LOG.info(String.format("Connection pool to %s closed", addr));
+        }
+
+//        @Override
+//        protected void finalize() throws Throwable {
+//            close();
+//            super.finalize();
+//        }
     }
 
     private volatile ImmutableList<PooledObject> pools = ImmutableList.of();
@@ -199,9 +214,20 @@ public class RoundRobinJedisPool implements JedisResourcePool {
             }
         }
         this.pools = builder.build();
-        for (PooledObject pool: addr2Pool.values()) {
+        for (final PooledObject pool: addr2Pool.values()) {
             LOG.info("Remove proxy: " + pool.addr);
-            pool.pool.close();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(10000);
+                    } catch (Exception e) {
+                        // do nothing
+                    } finally {
+                        pool.close();
+                    }
+                }
+            }).start();
         }
     }
 
@@ -215,7 +241,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
             int current = nextIdx.get();
             int next = current >= pools.size() - 1 ? 0 : current + 1;
             if (nextIdx.compareAndSet(current, next)) {
-                return pools.get(next).pool.getResource();
+                return pools.get(next).getResource();
             }
         }
     }
@@ -233,7 +259,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
         List<PooledObject> pools = this.pools;
         this.pools = ImmutableList.of();
         for (PooledObject pool: pools) {
-            pool.pool.close();
+            pool.close();
         }
     }
 
