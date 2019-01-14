@@ -33,8 +33,8 @@ import static org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -106,8 +106,12 @@ public class RoundRobinJedisPool implements JedisResourcePool {
         }
 
         public void close() {
-            pool.close();
-            LOG.info("Connection pool to {} closed", addr);
+            try {
+                pool.close();
+                LOG.info("Connection pool to {} closed", addr);
+            } catch (Exception e) {
+                LOG.error("Error closing connection pool to " + addr, e);
+            }
         }
     }
 
@@ -127,7 +131,8 @@ public class RoundRobinJedisPool implements JedisResourcePool {
 
     private final String clientName;
 
-    private final Timer jedisPoolClosingTimer = new Timer();
+    private final ScheduledThreadPoolExecutor jedisPoolClosingExecutor =
+            new ScheduledThreadPoolExecutor(1);
 
     private RoundRobinJedisPool(CuratorFramework curatorClient, boolean closeCurator,
             String zkProxyDir, JedisPoolConfig poolConfig, int connectionTimeoutMs, int soTimeoutMs,
@@ -216,12 +221,12 @@ public class RoundRobinJedisPool implements JedisResourcePool {
         this.pools = builder.build();
         for (final PooledObject pool: addr2Pool.values()) {
             LOG.info("Remove proxy: " + pool.addr);
-            jedisPoolClosingTimer.schedule(new TimerTask() {
+            jedisPoolClosingExecutor.schedule(new Runnable() {
                 @Override
                 public void run() {
                     pool.close();
                 }
-            }, DELAY_BEFORE_CLOSING_POOL);
+            }, DELAY_BEFORE_CLOSING_POOL, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -255,7 +260,7 @@ public class RoundRobinJedisPool implements JedisResourcePool {
         for (PooledObject pool: pools) {
             pool.close();
         }
-        jedisPoolClosingTimer.cancel();
+        jedisPoolClosingExecutor.shutdown();
     }
 
     /**
